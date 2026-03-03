@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>タイピング練習 with 手書き認識</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Poppins:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary: #4a6ee0;
+        --primary-hover: #3a5bce;
+        --bg-color: #f0f4f8;
+        --text-main: #2d3748;
+        --text-muted: #718096;
+        --success: #38a169;
+        --danger: #e53e3e;
+        --card-bg: #ffffff;
+        --border-radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+    body { 
+        font-family: 'Noto Sans JP', sans-serif; 
+        text-align: center; 
+        margin: 0; 
+        padding: 20px; 
+        background: var(--bg-color); 
+        color: var(--text-main);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+    }
+
+    /* 共通コンテナ */
+    #setup, #practice { width: 100%; max-width: 800px; }
+
+    /* --- セットアップ画面 --- */
+    #setup {
+        background: var(--card-bg);
+        padding: 50px 30px;
+        border-radius: var(--border-radius);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        margin-top: 10vh;
+    }
+    #setup h1 { font-family: 'Poppins', sans-serif; color: var(--primary); margin-top: 0; font-size: 2.2em; }
+    #setup input[type="file"] { margin: 25px 0; font-size: 1.1em; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; width: 80%; max-width: 400px; }
+
+    /* --- 学習画面：ヘッダー --- */
+    #progress {
+        font-size: 1.05em;
+        color: var(--text-muted);
+        font-weight: 500;
+        margin-bottom: 20px;
+        background: var(--card-bg);
+        padding: 10px 25px;
+        border-radius: 50px;
+        display: inline-block;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    }
+
+    /* --- 単語カードエリア --- */
+    .flashcard {
+        background: var(--card-bg);
+        padding: 40px 30px;
+        border-radius: var(--border-radius);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+        position: relative;
+    }
+    #word { 
+        font-family: 'Poppins', sans-serif; 
+        font-size: 4.5em; /* 英単語を最も大きく */
+        font-weight: 900; 
+        color: var(--text-main); 
+        margin: 0 0 5px 0; 
+        letter-spacing: -1px;
+        word-break: break-word;
+        line-height: 1.1;
+    }
+    #conjugation:not(:empty) { 
+        color: #a0aec0; 
+        font-size: 1.1em; 
+        font-style: italic; 
+        margin-bottom: 15px; 
+    }
+    #meaning { 
+        font-size: 1.8em; 
+        font-weight: 700; 
+        color: var(--primary); 
+        margin-bottom: 20px; 
+    }
+    
+    /* 例文・解説エリア（データがある時だけ装飾される） */
+    .example-area { margin-top: 15px; display: inline-block; max-width: 95%; text-align: left;}
+    #exampleEn:not(:empty) { 
+        padding: 15px 20px 5px 20px; 
+        font-family: 'Poppins', sans-serif; 
+        font-weight: 500; 
+        font-size: 1.25em; 
+        color: #2d3748; 
+        background: #f8fafc;
+        border-left: 4px solid var(--primary); 
+        border-radius: 12px 12px 0 0; 
+    }
+    #exampleJa:not(:empty) { 
+        padding: 0 20px 15px 20px; 
+        color: var(--text-muted); 
+        font-size: 1.05em; 
+        background: #f8fafc;
+        border-left: 4px solid var(--primary); 
+        border-radius: 0 0 12px 12px; 
+    }
+    #explanation:not(:empty) { 
+        margin-top: 20px; 
+        background: #fffbeb; 
+        color: #b45309; 
+        padding: 12px 20px; 
+        border-radius: 8px; 
+        font-size: 0.95em; 
+        display: inline-block; 
+        border: 1px solid #fde68a; 
+    }
+
+    /* --- 入力モード切替タブ --- */
+    #modeSelector {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: -15px; /* パネルに重ねる */
+        position: relative;
+        z-index: 2;
+    }
+    .modeBtn {
+        background: #e2e8f0;
+        color: var(--text-muted);
+        border: none;
+        padding: 12px 35px;
+        border-radius: 12px 12px 0 0;
+        font-size: 1.05em;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 -4px 10px rgba(0,0,0,0.02);
+    }
+    .modeBtn.active {
+        background: var(--card-bg);
+        color: var(--primary);
+        padding-bottom: 15px;
+    }
+
+    /* --- 入力パネル --- */
+    .inputPanel {
+        background: var(--card-bg);
+        border-radius: var(--border-radius);
+        padding: 35px 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        margin-bottom: 25px;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* キーボード */
+    #input {
+        font-family: 'Poppins', sans-serif;
+        font-size: 2.2em;
+        padding: 15px;
+        width: 100%;
+        max-width: 500px;
+        border: 3px solid #e2e8f0;
+        border-radius: 16px;
+        text-align: center;
+        color: var(--text-main);
+        transition: all 0.2s;
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);
+    }
+    #input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(74, 110, 224, 0.2); }
+
+    /* ペン（Canvas） */
+    #penCanvas {
+        border: 3px solid #e2e8f0;
+        border-radius: 12px;
+        background: #fff;
+        transition: border-color 0.2s;
+        touch-action: none;
+        cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cline x1='10' y1='1' x2='10' y2='19' stroke='black' stroke-width='1.5'/%3E%3Cline x1='1' y1='10' x2='19' y2='10' stroke='black' stroke-width='1.5'/%3E%3Ccircle cx='10' cy='10' r='1.5' fill='black'/%3E%3C/svg%3E") 10 10, crosshair;
+    }
+    #penControls { margin-top: 15px; display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; }
+    #penControls label { font-weight: 500; font-size: 0.95em; }
+    #penColorPicker { width: 36px; height: 36px; border: none; border-radius: 50%; cursor: pointer; padding: 0; }
+
+    /* --- 判定・フィードバック --- */
+    #result { margin-top: 10px; font-weight: 900; font-size: 1.6em; min-height: 1.5em; }
+    .feedback-correct { color: var(--success); animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: inline-block; }
+    .feedback-incorrect { color: var(--danger); }
+    @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    /* --- ボタン類 --- */
+    button {
+        font-family: 'Noto Sans JP', sans-serif;
+        font-weight: 600;
+        padding: 10px 20px;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #fff;
+        color: var(--text-main);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        border: 1px solid #e2e8f0;
+    }
+    button:hover:not(:disabled) { background: #f8fafc; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    button:active:not(:disabled) { transform: translateY(0); }
+    button:disabled { opacity: 0.5; cursor: default; box-shadow: none; border-color: transparent; }
+
+    .btn-judge { background: var(--primary); color: white; font-size: 1.1em; padding: 12px 30px; border-radius: 30px; border: none; box-shadow: 0 4px 15px rgba(74, 110, 224, 0.3); }
+    .btn-judge:hover:not(:disabled) { background: var(--primary-hover); color: white; }
+    .btn-clear { background: #edf2f7; color: #4a5568; border: none; }
+    .btn-correct { background: var(--success); color: white; border: none; padding: 10px 25px; box-shadow: 0 4px 15px rgba(56, 161, 105, 0.3); }
+    .btn-correct:hover:not(:disabled) { background: #2f855a; color: white; }
+
+    /* コントロールバー（下部） */
+    .controls-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        margin-top: 15px;
+        background: var(--card-bg);
+        padding: 15px 20px;
+        border-radius: 16px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+    }
+    .controls-row label { font-weight: 600; color: var(--text-muted); font-size: 0.95em; }
+    select { font-family: 'Noto Sans JP', sans-serif; font-size: 1em; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e0; outline: none; background: #fff;}
+    #prevBtn, #nextBtn { font-size: 1.2em; padding: 10px 25px; background: #e2e8f0; color: #4a5568; border: none; }
+
+    /* OCRテキスト */
+    #ocrStatus { margin-top: 15px; font-size: 0.95em; color: var(--text-muted); }
+    #ocrResult { font-size: 1.2em; color: var(--text-main); margin-top: 5px; }
+    .answer-reveal { margin: 15px 0; font-size: 1.05em; color: #4a5568; }
+    .answer-reveal strong { background: #fffbeb; padding: 4px 12px; border-radius: 6px; font-size: 1.2em; color: #b45309; border: 1px dashed #fcd34d;}
+
+    .ocr-loading { display:inline-block; width:16px; height:16px; border:3px solid #e2e8f0; border-top-color:var(--primary); border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; margin-right:8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* レスポンシブ（スマホ対応） */
+    @media (max-width: 600px) {
+        #word { font-size: 3em; }
+        #meaning { font-size: 1.4em; }
+        .flashcard { padding: 30px 15px; }
+        .inputPanel { padding: 25px 15px; }
+        #input { font-size: 1.8em; }
+    }
+</style>
+</head>
+<body>
+
+<div id="setup">
+    <h1>📝 タイピング＆手書き練習</h1>
+    <p style="color:#718096; margin-bottom: 20px;">学習するCSV / TSVファイルを選択してください</p>
+    <input type="file" id="fileSelect" accept=".csv,.tsv,.txt" multiple>
+    <br>
+    <button class="btn-judge" onclick="startLesson()">学習をスタート</button>
+    <p style="margin-top: 20px;"><small>※複数ファイルを選択すると自動で次に進みます</small></p>
+</div>
+
+<div id="practice" style="display:none;">
+    <div id="progress"></div>
+    
+    <div class="flashcard">
+        <div id="word"></div>
+        <div id="conjugation"></div>
+        <div id="meaning"></div>
+        
+        <div class="example-area">
+            <div id="exampleEn"></div>
+            <div id="exampleJa"></div>
+        </div>
+        <div id="explanation"></div>
+    </div>
+
+    <div id="modeSelector">
+        <button class="modeBtn active" id="modeBtnKeyboard" onclick="switchMode('keyboard')">⌨️ キーボード</button>
+        <button class="modeBtn" id="modeBtnPen" onclick="switchMode('pen')">✏️ ペン入力</button>
+    </div>
+
+    <div id="keyboardPanel" class="inputPanel">
+        <input id="input" type="text" oninput="checkInput()" autocomplete="off"
+               placeholder="Type here..." inputmode="text" spellcheck="false">
+    </div>
+
+    <div id="penPanel" class="inputPanel" style="display:none;">
+        <canvas id="penCanvas" width="860" height="200"></canvas>
+        <div id="penControls">
+            <label>色: <input type="color" id="penColorPicker" value="#2d3748"></label>
+            <label>太さ: <input type="range" id="penSize" min="1" max="16" value="6"> <span id="penSizeVal">6</span>px</label>
+            <button class="btn-clear" onclick="clearCanvas()">🗑️ 消去</button>
+            <button class="btn-judge" onclick="runOCR()">🔍 認識して判定</button>
+        </div>
+        <div id="ocrStatus"></div>
+        <div id="ocrResult"></div>
+        
+        <div id="judgeArea">
+            <div class="answer-reveal" id="answerRevealArea">
+                正解: <strong id="answerDisplay">？？？</strong>
+                <button onclick="toggleAnswer()" style="margin-left:10px; font-size:0.9em;">👁️ 答えを見る</button>
+            </div>
+            <button class="btn-correct" onclick="markCorrectAndNext()">⭕ 正解にして次へ</button>
+        </div>
+    </div>
+
+    <div id="result"></div>
+
+    <div class="controls-row">
+        <button onclick="previousWord()" id="prevBtn">⇦</button>
+        <button onclick="replayAudio()">🔊 もう一度聴く</button>
+        <button onclick="skipFile()">⏭️ ファイルをスキップ</button>
+        <button onclick="nextWord()" id="nextBtn">⇨</button>
+    </div>
+
+    <div class="controls-row">
+        <label>🎤 音声: </label>
+        <select id="voiceSelect" onchange="onVoiceChange()">
+            <option value="">読み込み中...</option>
+        </select>
+        
+        <div style="display: flex; align-items: center; gap: 5px; margin-left: 10px;">
+            <label>音程: </label>
+            <button onclick="adjustPitch(-0.1)" style="padding: 4px 8px;">🔽</button>
+            <span id="pitchValue" style="width: 25px; display: inline-block; text-align: center; font-weight: bold;">1.2</span>
+            <button onclick="adjustPitch(0.1)" style="padding: 4px 8px;">🔼</button>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 5px; margin-left: 10px;">
+            <label>速度: </label>
+            <button onclick="adjustRate(-0.1)" style="padding: 4px 8px;">🐌</button>
+            <span id="rateValue" style="width: 25px; display: inline-block; text-align: center; font-weight: bold;">0.9</span>
+            <button onclick="adjustRate(0.1)" style="padding: 4px 8px;">🐇</button>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+// =============================================
+// 状態管理
+// =============================================
+let allFiles = [], currentFileIndex = 0, data = [], index = 0;
+let currentWord = "", voicePitch = 1.2, voiceRate = 0.9;
+let answerVisible = false, currentMode = 'keyboard';
+let isDrawing = false, lastX = 0, lastY = 0, penCtx = null;
+let tesseractWorker = null;
+let ocrReady = false;
+
+// =============================================
+// Tesseract初期化（バックグラウンドで先読み）
+// =============================================
+async function initTesseract() {
+    try {
+        tesseractWorker = await Tesseract.createWorker('eng', 1, { logger: () => {} });
+        await tesseractWorker.setParameters({
+            tessedit_char_whitelist: "abcdefghijklmnopqrstuvwxyz'- ",
+            tessedit_pageseg_mode: '7',  // 1行テキスト
+        });
+        ocrReady = true;
+    } catch(e) {
+        console.warn('Tesseract初期化失敗:', e);
+        ocrReady = false;
+    }
+}
+initTesseract();
+
+// =============================================
+// 正規化 & 判定ユーティリティ
+// =============================================
+function normalize(s) {
+    return s.toLowerCase().replace(/[^a-z'\- ]/g, '').replace(/\s+/g, ' ').trim();
+}
+function normalizeNoSpace(s) {
+    return normalize(s).replace(/ /g, '');
+}
+function levenshtein(a, b) {
+    const dp = Array.from({length: a.length+1}, (_,i) => [i, ...Array(b.length).fill(0)]);
+    for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+    for (let i = 1; i <= a.length; i++)
+        for (let j = 1; j <= b.length; j++)
+            dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    return dp[a.length][b.length];
+}
+
+const CHAR_CONFUSIONS = [
+    ['y', 'r'], ['q', 'a'], ['o', 'a'], ['c', 'e'], 
+    ['i', 'l'], ['l', 'i'], ['u', 'n'], ['n', 'u'], ['m', 'rn'],
+];
+
+function applyConfusionMap(recognized, correct) {
+    const recNS  = recognized.replace(/ /g, '');
+    const corNS  = correct.replace(/ /g, '');
+    if (recNS === corNS) return recognized;
+
+    let best = recognized;
+    let bestDist = levenshtein(recNS, corNS);
+
+    for (let i = 0; i < recognized.length; i++) {
+        const ch = recognized[i];
+        for (const [wrong, right] of CHAR_CONFUSIONS) {
+            if (ch !== wrong) continue;
+            const candidate = recognized.slice(0, i) + right + recognized.slice(i + 1);
+            const candNS = candidate.replace(/ /g, '');
+            const dist = levenshtein(candNS, corNS);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = candidate;
+            }
+        }
+    }
+    return best;
+}
+
+function judgeText(rawText, statusEl) {
+    const cor    = normalize(currentWord);
+    const corNS  = normalizeNoSpace(currentWord);
+    const lowered   = rawText.toLowerCase().trim();
+    const corrected = applyConfusionMap(normalize(lowered), cor);
+    const rec    = corrected;
+    const recNS  = normalizeNoSpace(corrected);
+
+    if (!recNS) {
+        statusEl.innerHTML = '🖊️ 文字が認識できませんでした。太めに書いてみてください。';
+        return false;
+    }
+
+    const dispCorrected = corrected !== rawText.toLowerCase().trim()
+        ? ` → 補正: <em>${corrected}</em>` : '';
+    document.getElementById('ocrResult').innerHTML =
+        `認識結果: <strong style="font-size:1.2em;color:var(--primary);">${rawText.trim()}</strong>${dispCorrected}`;
+
+    if (rec === cor || recNS === corNS) {
+        statusEl.innerHTML = rec !== cor ? '（スペースを除いて一致）' : '';
+        document.getElementById('result').innerHTML = '<span class="feedback-correct">🎉 正解！</span>';
+        setTimeout(() => { index++; showWord(); }, 1000);
+        return true;
+    }
+
+    const dist = levenshtein(recNS, corNS);
+    const threshold = corNS.length <= 3 ? 1 : Math.max(1, Math.round(corNS.length / 5));
+    if (dist <= threshold) {
+        statusEl.innerHTML = `（ほぼ一致 / 差: ${dist}文字）`;
+        document.getElementById('result').innerHTML = '<span class="feedback-correct">⭕ ほぼ正解！</span>';
+        setTimeout(() => { index++; showWord(); }, 1200);
+        return true;
+    }
+
+    statusEl.innerHTML = `❌ 不一致（認識: "${rec}"　正解: "${cor}"）`;
+    document.getElementById('result').innerHTML = '';
+    const ja = document.getElementById('judgeArea');
+    ja.style.border = '2px dashed var(--danger)';
+    ja.style.borderRadius = '12px';
+    ja.style.padding = '15px';
+    setTimeout(() => { ja.style.border=''; ja.style.padding=''; }, 2500);
+    return false;
+}
+
+// =============================================
+// キャンバス前処理
+// =============================================
+function preprocessCanvas(srcCanvas) {
+    const scale = 5;
+    const big = document.createElement('canvas');
+    big.width  = srcCanvas.width  * scale;
+    big.height = srcCanvas.height * scale;
+    const ctx = big.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, big.width, big.height);
+    ctx.drawImage(srcCanvas, 0, 0, big.width, big.height);
+
+    let imgData = ctx.getImageData(0, 0, big.width, big.height);
+    let d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+        const gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+        const bw = gray < 180 ? 0 : 255;
+        d[i] = d[i+1] = d[i+2] = bw;
+        d[i+3] = 255;
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    const pad = 50;
+    const final = document.createElement('canvas');
+    final.width  = big.width + pad * 2;
+    final.height = big.height + pad * 2;
+    const fCtx = final.getContext('2d');
+    fCtx.fillStyle = '#fff';
+    fCtx.fillRect(0, 0, final.width, final.height);
+    fCtx.drawImage(big, pad, pad);
+    return final;
+}
+
+// =============================================
+// OCR実行
+// =============================================
+async function runOCR() {
+    const canvas   = document.getElementById('penCanvas');
+    const statusEl = document.getElementById('ocrStatus');
+    const resultEl = document.getElementById('ocrResult');
+
+    if (!ocrReady) {
+        statusEl.innerHTML = '<span class="ocr-loading"></span>OCRエンジン準備中...';
+        await initTesseract();
+        if (!ocrReady) { statusEl.innerHTML = '⚠️ OCR利用不可。手動で採点してください。'; return; }
+    }
+
+    statusEl.innerHTML = '<span class="ocr-loading"></span>認識中...';
+    resultEl.innerHTML = '';
+
+    try {
+        const processed = preprocessCanvas(canvas);
+        const { data: { text } } = await tesseractWorker.recognize(processed);
+        judgeText(text, statusEl);
+    } catch(e) {
+        statusEl.innerHTML = '⚠️ 認識エラー。手動で採点してください。';
+        console.error('OCRエラー:', e);
+    }
+}
+
+// =============================================
+// ファイル読み込み
+// =============================================
+function boldify(t) { return t.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>"); }
+
+function startLesson() {
+    const fi = document.getElementById('fileSelect');
+    if (!fi.files.length) { alert('CSV / TSVファイルを選択してください'); return; }
+    allFiles = Array.from(fi.files);
+    currentFileIndex = 0;
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('practice').style.display = 'block';
+    loadCurrentFile();
+}
+
+function loadCurrentFile() {
+    if (currentFileIndex >= allFiles.length) {
+        document.getElementById('practice').style.display = 'none';
+        document.getElementById('setup').style.display = 'block';
+        alert('お疲れ様！全てのファイルが終わりました！');
+        return;
+    }
+    updateProgress();
+    document.getElementById('result').innerHTML = '<span style="color:var(--primary);">ファイル読み込み中...</span>';
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const fileName = allFiles[currentFileIndex].name.toLowerCase();
+        const isTsv = fileName.endsWith('.tsv') || fileName.endsWith('.txt');
+        const delimiter = isTsv ? '\t' : ',';
+        const rows = e.target.result.split(/\r?\n/).map(r => r.split(delimiter));
+        data = rows.filter(r => r.length >= 2 && r[0].trim() !== '')
+            .map(r => [0,1,2,3,4,5].map(i => boldify(r[i] || "")));
+        if (!data.length) {
+            document.getElementById('result').innerHTML = 'このファイルは空です。次のファイルに進みます...';
+            setTimeout(() => { currentFileIndex++; loadCurrentFile(); }, 1000);
+            return;
+        }
+        index = 0;
+        document.getElementById('result').innerHTML = '';
+        showWord();
+    };
+    reader.onerror = () => { alert('読み込み失敗: ' + allFiles[currentFileIndex].name); currentFileIndex++; loadCurrentFile(); };
+    try { reader.readAsText(allFiles[currentFileIndex], 'UTF-8'); }
+    catch(e) { try { reader.readAsText(allFiles[currentFileIndex], 'Shift_JIS'); } catch(e2) { reader.readAsText(allFiles[currentFileIndex]); } }
+}
+
+function updateProgress() {
+    const t = `ファイル ${currentFileIndex+1}/${allFiles.length}: ${allFiles[currentFileIndex].name}`;
+    document.getElementById('progress').innerHTML = data.length ? t + ` (${index+1}/${data.length}問)` : t;
+}
+
+// =============================================
+// 問題表示
+// =============================================
+function showWord() {
+    if (index >= data.length) {
+        document.getElementById('result').innerHTML = `🎉 ${allFiles[currentFileIndex].name} が完了しました！`;
+        if (currentFileIndex + 1 < allFiles.length) {
+            document.getElementById('result').innerHTML += '<br><span style="font-size:0.7em;color:#718096;">3秒後に次のファイルに進みます...</span>';
+            setTimeout(() => { currentFileIndex++; loadCurrentFile(); }, 3000);
+        } else {
+            setTimeout(() => {
+                document.getElementById('practice').style.display = 'none';
+                document.getElementById('setup').style.display = 'block';
+                alert('お疲れ様！全てのファイルが終わりました！');
+            }, 2000);
+        }
+        return;
+    }
+    ['word','meaning','conjugation','exampleEn','exampleJa','explanation'].forEach((id,i) => {
+        document.getElementById(id).innerHTML = data[index][i];
+    });
+    currentWord = data[index][0].replace(/<[^>]*>/g, '');
+
+    if (currentMode === 'keyboard') {
+        document.getElementById('input').value = '';
+        setTimeout(() => document.getElementById('input').focus(), 100);
+    } else {
+        clearCanvas();
+        document.getElementById('ocrStatus').innerHTML = '';
+        document.getElementById('ocrResult').innerHTML = '';
+    }
+    document.getElementById('result').innerHTML = '';
+    updateProgress(); updateNavigationButtons(); speakWord(currentWord);
+}
+
+function checkInput() {
+    if (document.getElementById('input').value.toLowerCase() === currentWord.toLowerCase()) {
+        document.getElementById('result').innerHTML = '<span class="feedback-correct">🎉 正解！</span>';
+        setTimeout(() => { index++; showWord(); }, 500);
+    }
+}
+
+// =============================================
+// モード切替
+// =============================================
+function switchMode(mode) {
+    currentMode = mode;
+    const isPen = mode === 'pen';
+    document.getElementById('keyboardPanel').style.display = isPen ? 'none' : 'block';
+    document.getElementById('penPanel').style.display = isPen ? 'block' : 'none';
+    document.getElementById('modeBtnKeyboard').classList.toggle('active', !isPen);
+    document.getElementById('modeBtnPen').classList.toggle('active', isPen);
+    document.getElementById('result').innerHTML = '';
+    if (!isPen) setTimeout(() => document.getElementById('input').focus(), 100);
+    else { resizeCanvas(); clearCanvas(); document.getElementById('ocrStatus').innerHTML = ''; document.getElementById('ocrResult').innerHTML = ''; }
+}
+
+// =============================================
+// 自己採点（補助）
+// =============================================
+function toggleAnswer() {
+    answerVisible = !answerVisible;
+    document.getElementById('answerDisplay').textContent = answerVisible ? currentWord : '？？？';
+}
+function markCorrectAndNext() {
+    document.getElementById('result').innerHTML = '<span class="feedback-correct">🎉 正解！</span>';
+    setTimeout(() => { index++; showWord(); }, 600);
+}
+
+// =============================================
+// Canvas ペン入力
+// =============================================
+function resizeCanvas() {
+    const canvas = document.getElementById('penCanvas');
+    if (!canvas) return;
+    const panel = document.getElementById('penPanel');
+    const w = Math.max(200, Math.min(panel.clientWidth - 40, 1000));
+    canvas.width = w;
+    canvas.height = Math.max(130, Math.floor(w * 0.28));
+    penCtx = canvas.getContext('2d');
+    drawGuide();
+}
+function drawGuide() {
+    const canvas = document.getElementById('penCanvas');
+    if (!penCtx) return;
+    penCtx.fillStyle = '#fff';
+    penCtx.fillRect(0, 0, canvas.width, canvas.height);
+    penCtx.strokeStyle = '#e2e8f0';
+    penCtx.lineWidth = 2;
+    const y = canvas.height * 0.76;
+    penCtx.beginPath(); penCtx.moveTo(12, y); penCtx.lineTo(canvas.width - 12, y); penCtx.stroke();
+}
+function clearCanvas() {
+    drawGuide();
+    answerVisible = false;
+    const ad = document.getElementById('answerDisplay');
+    if (ad) ad.textContent = '？？？';
+    const ocrS = document.getElementById('ocrStatus');
+    const ocrR = document.getElementById('ocrResult');
+    if (ocrS) ocrS.innerHTML = '';
+    if (ocrR) ocrR.innerHTML = '';
+    document.getElementById('result').innerHTML = '';
+}
+function initCanvas() {
+    const canvas = document.getElementById('penCanvas');
+    penCtx = canvas.getContext('2d');
+    resizeCanvas();
+    document.getElementById('penSize').addEventListener('input', function() {
+        document.getElementById('penSizeVal').textContent = this.value;
+    });
+    window.addEventListener('resize', () => { if (currentMode === 'pen') resizeCanvas(); });
+
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+        const src = e.touches ? e.touches[0] : e;
+        return { x: (src.clientX - rect.left) * sx, y: (src.clientY - rect.top) * sy };
+    }
+    function getLW(e) {
+        const base = parseInt(document.getElementById('penSize').value);
+        if (typeof e.pressure === 'number' && e.pressure > 0 && e.pointerType === 'pen')
+            return Math.max(1.5, base * e.pressure * 2.8);
+        return base;
+    }
+    function startDraw(e) {
+        e.preventDefault(); isDrawing = true;
+        const p = getPos(e); lastX = p.x; lastY = p.y;
+        penCtx.fillStyle = document.getElementById('penColorPicker').value;
+        penCtx.beginPath(); penCtx.arc(lastX, lastY, getLW(e)/2, 0, Math.PI*2); penCtx.fill();
+    }
+    function draw(e) {
+        if (!isDrawing) return; e.preventDefault();
+        const p = getPos(e);
+        penCtx.beginPath(); penCtx.moveTo(lastX, lastY); penCtx.lineTo(p.x, p.y);
+        penCtx.strokeStyle = document.getElementById('penColorPicker').value;
+        penCtx.lineWidth = getLW(e); penCtx.lineCap = 'round'; penCtx.lineJoin = 'round';
+        penCtx.stroke(); lastX = p.x; lastY = p.y;
+    }
+    function endDraw() { isDrawing = false; }
+
+    canvas.addEventListener('pointerdown', startDraw);
+    canvas.addEventListener('pointermove', draw);
+    canvas.addEventListener('pointerup', endDraw);
+    canvas.addEventListener('pointercancel', endDraw);
+    canvas.addEventListener('pointerleave', endDraw);
+}
+document.addEventListener('DOMContentLoaded', initCanvas);
+
+// =============================================
+// ナビ
+// =============================================
+function previousWord() { if (index > 0) { index--; showWord(); } }
+function nextWord() { if (index < data.length - 1) { index++; showWord(); } }
+function skipFile() {
+    if (confirm('このファイルをスキップして次のファイルに進みますか？')) { currentFileIndex++; loadCurrentFile(); }
+}
+function updateNavigationButtons() {
+    document.getElementById('prevBtn').disabled = index === 0;
+    document.getElementById('nextBtn').disabled = index === data.length - 1;
+}
+
+// =============================================
+// TTS音声
+// =============================================
+function populateVoiceSelect() {
+    const voices = speechSynthesis.getVoices();
+    const sel = document.getElementById('voiceSelect');
+    if (!sel || !voices.length) return;
+
+    const saved = localStorage.getItem('selectedVoiceName');
+    const current = sel.value || saved;
+
+    const enVoices = voices.filter(v => v.lang.startsWith('en'));
+    const otherVoices = voices.filter(v => !v.lang.startsWith('en'));
+
+    sel.innerHTML = '';
+
+    if (enVoices.length) {
+        const grpEn = document.createElement('optgroup');
+        grpEn.label = '英語';
+        enVoices.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.name;
+            opt.textContent = `${v.name} (${v.lang})`;
+            grpEn.appendChild(opt);
+        });
+        sel.appendChild(grpEn);
+    }
+
+    if (otherVoices.length) {
+        const grpOther = document.createElement('optgroup');
+        grpOther.label = 'その他';
+        otherVoices.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.name;
+            opt.textContent = `${v.name} (${v.lang})`;
+            grpOther.appendChild(opt);
+        });
+        sel.appendChild(grpOther);
+    }
+
+    if (current && voices.find(v => v.name === current)) {
+        sel.value = current;
+    } else {
+        const preferred = [
+            voices.find(v => v.name.includes('Samantha (Premium)')),
+            voices.find(v => v.name.includes('Alex (Premium)')),
+            voices.find(v => v.name === 'Samantha'),
+            voices.find(v => v.name === 'Alex'),
+            voices.find(v => v.name === 'Victoria'),
+            voices.find(v => v.name === 'Karen'),
+            voices.find(v => v.lang === 'en-US' && !v.localService),
+            voices.find(v => v.lang === 'en-US'),
+            voices.find(v => v.lang.startsWith('en'))
+        ].find(v => v);
+        if (preferred) sel.value = preferred.name;
+    }
+}
+
+function onVoiceChange() {
+    const sel = document.getElementById('voiceSelect');
+    if (sel && sel.value) localStorage.setItem('selectedVoiceName', sel.value);
+    if (currentWord) speakWord(currentWord);
+}
+
+function getSelectedVoice() {
+    const sel = document.getElementById('voiceSelect');
+    const name = sel ? sel.value : '';
+    return speechSynthesis.getVoices().find(v => v.name === name) || null;
+}
+
+speechSynthesis.onvoiceschanged = populateVoiceSelect;
+if (speechSynthesis.getVoices().length) populateVoiceSelect();
+
+function speakWord(text) {
+    speechSynthesis.cancel();
+    const sv = getSelectedVoice();
+    function makeU(t) {
+        const u = new SpeechSynthesisUtterance(t);
+        u.lang = 'en-US'; u.rate = voiceRate; u.volume = 1.0; u.pitch = voicePitch;
+        if (sv) u.voice = sv;
+        return u;
+    }
+    const u = makeU(text);
+    u.onend = () => {
+        const ex = data[index] ? data[index][3].replace(/<[^>]*>/g, '') : '';
+        if (ex.trim()) setTimeout(() => speechSynthesis.speak(makeU(ex)), 800);
+    };
+    speechSynthesis.speak(u);
+}
+function replayAudio() { if (currentWord) speakWord(currentWord); }
+function adjustPitch(c) {
+    voicePitch = Math.max(0.1, Math.min(2.0, voicePitch+c));
+    document.getElementById('pitchValue').textContent = voicePitch.toFixed(1);
+    if (currentWord) speakWord(currentWord);
+}
+function adjustRate(c) {
+    voiceRate = Math.max(0.1, Math.min(2.0, voiceRate+c));
+    document.getElementById('rateValue').textContent = voiceRate.toFixed(1);
+    if (currentWord) speakWord(currentWord);
+}
+</script>
+</body>
+</html>
